@@ -17,7 +17,7 @@ sse-starlette==1.8.2
 slowapi==0.1.9
 pyotp==2.8.0
 qrcode[pil]==7.4.2
-sendgrid==6.11.0
+sendgrid==6.12.5
 pytest==7.4.3
 pytest-asyncio==0.23.2
 greenlet==3.0.1
