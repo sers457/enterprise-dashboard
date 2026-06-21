@@ -16,6 +16,7 @@ interface AuthStore {
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   setToken: (token: string) => void;
+  setRefreshToken: (refreshToken: string) => void;
   updateUser: (user: Partial<User>) => void;
   clearError: () => void;
 }
@@ -97,8 +98,8 @@ export const useAuthStore = create<AuthStore>()(
         });
       },
 
-      setToken: (token) => set({ token }),
-      setRefreshToken: (refreshToken) => set({ refreshToken }),
+      setToken: (token: string) => set({ token }),
+      setRefreshToken: (refreshToken: string) => set({ refreshToken }),
 
       updateUser: (updates) => {
         const currentUser = get().user;

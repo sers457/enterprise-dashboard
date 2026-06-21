@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface DropdownItem {
-  label: string;
+  label?: string;
   value?: string;
   icon?: React.ReactNode;
   onClick?: () => void;

@@ -5,22 +5,22 @@ import { Button } from './Button';
 import { Input } from './Input';
 import { Badge } from './Badge';
 
-interface Column<T> {
+interface Column {
   key: string;
   header: string;
   sortable?: boolean;
   filterable?: boolean;
-  render?: (item: T) => React.ReactNode;
+  render?: (item: any) => React.ReactNode;
   width?: string;
 }
 
-interface DataTableProps<T> {
-  columns: Column<T>[];
-  data: T[];
-  keyExtractor: (item: T) => string;
-  onRowClick?: (item: T) => void;
+interface DataTableProps {
+  columns: Column[];
+  data: Record<string, unknown>[];
+  keyExtractor: (item: Record<string, unknown>) => string;
+  onRowClick?: (item: Record<string, unknown>) => void;
   searchable?: boolean;
-  searchKeys?: (keyof T)[];
+  searchKeys?: string[];
   pageSize?: number;
   selectable?: boolean;
   onSelectionChange?: (selected: string[]) => void;
@@ -31,7 +31,7 @@ interface DataTableProps<T> {
   className?: string;
 }
 
-export function DataTable<T extends Record<string, unknown>>({
+export function DataTable({
   columns,
   data,
   keyExtractor,
@@ -46,7 +46,7 @@ export function DataTable<T extends Record<string, unknown>>({
   exportable = false,
   onExport,
   className,
-}: DataTableProps<T>) {
+}: DataTableProps) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<string | null>(null);
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -56,7 +56,7 @@ export function DataTable<T extends Record<string, unknown>>({
 
   const filtered = useMemo(() => {
     if (!search) return data;
-    const keys = searchKeys || (columns.length > 0 ? [columns[0].key as keyof T] : []);
+    const keys = searchKeys || (columns.length > 0 ? [columns[0].key] : []);
     return data.filter((item) =>
       keys.some((key) => {
         const val = item[key];
@@ -68,8 +68,8 @@ export function DataTable<T extends Record<string, unknown>>({
   const sorted = useMemo(() => {
     if (!sortKey) return filtered;
     return [...filtered].sort((a, b) => {
-      const aVal = a[sortKey as keyof T];
-      const bVal = b[sortKey as keyof T];
+      const aVal = a[sortKey];
+      const bVal = b[sortKey];
       if (aVal == null) return 1;
       if (bVal == null) return -1;
       const cmp = String(aVal).localeCompare(String(bVal), 'en', { numeric: true });

@@ -73,7 +73,7 @@ export function Chart({
             {showGrid && <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#2a2a35' : '#e5e7eb'} vertical={false} />}
             <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
-            {showTooltip && <Tooltip content={tooltipContent} />}
+            {showTooltip && <Tooltip content={tooltipContent as any} />}
             {showLegend && <Legend />}
             {yKeys.map((key, i) => (
               <Line
@@ -96,7 +96,7 @@ export function Chart({
             {showGrid && <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#2a2a35' : '#e5e7eb'} vertical={false} />}
             <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
-            {showTooltip && <Tooltip content={tooltipContent} />}
+            {showTooltip && <Tooltip content={tooltipContent as any} />}
             {showLegend && <Legend />}
             {yKeys.map((key, i) => (
               <Bar
@@ -116,7 +116,7 @@ export function Chart({
             {showGrid && <CartesianGrid strokeDasharray="3 3" stroke={isDark ? '#2a2a35' : '#e5e7eb'} vertical={false} />}
             <XAxis dataKey={xKey} tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
             <YAxis tick={{ fontSize: 12, fill: isDark ? '#9ca3af' : '#6b7280' }} axisLine={false} tickLine={false} />
-            {showTooltip && <Tooltip content={tooltipContent} />}
+            {showTooltip && <Tooltip content={tooltipContent as any} />}
             {showLegend && <Legend />}
             {yKeys.map((key, i) => (
               <Area
@@ -152,7 +152,7 @@ export function Chart({
                 <Cell key={i} fill={colors[i % colors.length]} />
               ))}
             </Pie>
-            {showTooltip && <Tooltip content={tooltipContent} />}
+            {showTooltip && <Tooltip content={tooltipContent as any} />}
             {showLegend && <Legend />}
           </RechartsPie>
         );
