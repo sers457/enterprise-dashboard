@@ -6,7 +6,7 @@ UVICORN_PORT = "$PORT"
 nixPkgs = ["python3.13", "uv"]
 
 [phases.install]
-cmds = ["uv pip install -r requirements.txt"]
+cmds = ["uv pip install --system -r requirements.txt"]
 
 [phases.start]
 cmd = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
