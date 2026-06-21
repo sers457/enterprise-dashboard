@@ -17,5 +17,4 @@ qrcode[pil]==8.2
 pytest==9.1.1
 pytest-asyncio==1.4.0
 greenlet==3.5.1
-openai==1.70.2
-email-validator==2.0.0
+openai==2.43.0
