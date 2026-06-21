@@ -1,0 +1,34 @@
+# Git
+.git
+.gitignore
+.gitattributes
+.github
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Docker
+docker-compose*.yml
+Dockerfile*
+.dockerignore
+
+# Documentation
+**/*.md
+docs/
+
+# Deploy scripts (not needed in build context)
+deploy/

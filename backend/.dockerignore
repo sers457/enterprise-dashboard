@@ -1,0 +1,69 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+.eggs/
+*.whl
+
+# Environment
+.env
+.env.*
+!.env.example
+venv/
+.venv/
+env/
+virtualenv/
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Tests (not needed in production image)
+tests/
+test_*.py
+.coverage
+coverage.xml
+.pytest_cache/
+htmlcov/
+.tmp/
+
+# Docker
+Dockerfile
+.dockerignore
+
+# Migrations (keep versions, ignore generated)
+migrations/versions/*.pyc
+
+# Secrets
+**/secrets/
+*.pem
+*.key
+
+# Uploads
+uploads/
+static/
+
+# Documentation
+**/*.md
+docs/

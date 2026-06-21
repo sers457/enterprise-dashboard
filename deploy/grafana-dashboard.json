@@ -1,0 +1,355 @@
+{
+  "__inputs": [],
+  "__requires": [],
+  "title": "Enterprise Admin Dashboard",
+  "version": 1,
+  "schemaVersion": 38,
+  "tags": ["enterprise", "dashboard", "infrastructure"],
+  "timezone": "browser",
+  "editable": true,
+  "refresh": "30s",
+  "panels": [
+    {
+      "title": "API Request Rate",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"backend\"}[5m])",
+          "legendFormat": "{{method}} {{endpoint}}",
+          "refId": "A"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "reqps", "label": "Requests/sec" },
+        { "format": "short" }
+      ],
+      "legend": { "show": true, "max": false }
+    },
+    {
+      "title": "API Response Time (P95)",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])) by (le))",
+          "legendFormat": "P95",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])) by (le))",
+          "legendFormat": "P99",
+          "refId": "B"
+        },
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"backend\"}[5m])) by (le))",
+          "legendFormat": "P50",
+          "refId": "C"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "s", "label": "Response Time" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "HTTP Status Codes",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"backend\",status=~\"2..\"}[5m])",
+          "legendFormat": "2xx Success",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(http_requests_total{job=\"backend\",status=~\"4..\"}[5m])",
+          "legendFormat": "4xx Client Error",
+          "refId": "B"
+        },
+        {
+          "expr": "rate(http_requests_total{job=\"backend\",status=~\"5..\"}[5m])",
+          "legendFormat": "5xx Server Error",
+          "refId": "C"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "reqps", "label": "Requests/sec" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Active Users",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 8 },
+      "targets": [
+        {
+          "expr": "active_users_total",
+          "refId": "A"
+        }
+      ],
+      "format": "short",
+      "colorValue": true,
+      "colors": ["rgba(245, 54, 54, 0.9)", "rgba(237, 129, 40, 0.89)", "rgba(50, 172, 45, 0.97)"],
+      "thresholds": "50, 200"
+    },
+    {
+      "title": "Total Requests (24h)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "expr": "increase(http_requests_total{job=\"backend\"}[24h])",
+          "refId": "A"
+        }
+      ],
+      "format": "short",
+      "colorValue": true,
+      "colors": ["rgba(50, 172, 45, 0.97)", "rgba(237, 129, 40, 0.89)", "rgba(245, 54, 54, 0.9)"]
+    },
+    {
+      "title": "Error Rate (%)",
+      "type": "stat",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(http_requests_total{job=\"backend\",status=~\"5..\"}[5m]) / rate(http_requests_total{job=\"backend\"}[5m]) * 100",
+          "refId": "A"
+        }
+      ],
+      "format": "percentunit",
+      "colorValue": true,
+      "colors": ["rgba(50, 172, 45, 0.97)", "rgba(237, 129, 40, 0.89)", "rgba(245, 54, 54, 0.9)"],
+      "thresholds": "1, 5"
+    },
+    {
+      "title": "CPU Usage",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 12 },
+      "targets": [
+        {
+          "expr": "100 - (avg by(instance)(rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100)",
+          "legendFormat": "CPU {{instance}}",
+          "refId": "A"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "percent", "label": "CPU Usage", "max": 100 },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Memory Usage",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 12 },
+      "targets": [
+        {
+          "expr": "node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes",
+          "legendFormat": "Used",
+          "refId": "A"
+        },
+        {
+          "expr": "node_memory_MemAvailable_bytes",
+          "legendFormat": "Available",
+          "refId": "B"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "bytes", "label": "Memory" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Disk Usage",
+      "type": "gauge",
+      "gridPos": { "h": 8, "w": 4, "x": 16, "y": 12 },
+      "targets": [
+        {
+          "expr": "(node_filesystem_size_bytes{mountpoint=\"/\"} - node_filesystem_avail_bytes{mountpoint=\"/\"}) / node_filesystem_size_bytes{mountpoint=\"/\"} * 100",
+          "refId": "A"
+        }
+      ],
+      "format": "percent",
+      "gauge": {
+        "show": true,
+        "minValue": 0,
+        "maxValue": 100,
+        "thresholdMarkers": true,
+        "thresholdLabels": true
+      },
+      "thresholds": "50, 80, 90"
+    },
+    {
+      "title": "Network I/O",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 20, "y": 12 },
+      "targets": [
+        {
+          "expr": "rate(node_network_receive_bytes_total{device!=\"lo\"}[5m])",
+          "legendFormat": "RX {{device}}",
+          "refId": "A"
+        },
+        {
+          "expr": "rate(node_network_transmit_bytes_total{device!=\"lo\"}[5m])",
+          "legendFormat": "TX {{device}}",
+          "refId": "B"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "bytes", "label": "Network I/O" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Database Connections",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 20 },
+      "targets": [
+        {
+          "expr": "pg_stat_database_numbackends",
+          "legendFormat": "Active Connections",
+          "refId": "A"
+        },
+        {
+          "expr": "pg_stat_database_xact_commit + pg_stat_database_xact_rollback",
+          "legendFormat": "Total Transactions",
+          "refId": "B"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Connections" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Redis Operations",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 20 },
+      "targets": [
+        {
+          "expr": "rate(redis_commands_processed_total[5m])",
+          "legendFormat": "Commands/sec",
+          "refId": "A"
+        },
+        {
+          "expr": "redis_memory_used_bytes / redis_memory_max_bytes * 100",
+          "legendFormat": "Memory Usage %",
+          "refId": "B"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Operations" },
+        { "format": "percent" }
+      ]
+    },
+    {
+      "title": "Docker Container Status",
+      "type": "table",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 20 },
+      "targets": [
+        {
+          "expr": "count(container_last_seen) by (name)",
+          "format": "table",
+          "instant": true,
+          "refId": "A"
+        }
+      ],
+      "columns": [
+        { "text": "Container", "value": "name" },
+        { "text": "Status", "value": "Value" }
+      ],
+      "styles": [
+        { "pattern": "Value", "type": "number", "decimals": 0, "unit": "short" }
+      ]
+    },
+    {
+      "title": "Celery Queue Length",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 28 },
+      "targets": [
+        {
+          "expr": "celery_queue_length",
+          "legendFormat": "{{queue}}",
+          "refId": "A"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Tasks" },
+        { "format": "short" }
+      ]
+    },
+    {
+      "title": "Failed Login Attempts",
+      "type": "graph",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 28 },
+      "targets": [
+        {
+          "expr": "rate(failed_login_attempts_total[5m])",
+          "legendFormat": "Failed Logins",
+          "refId": "A"
+        }
+      ],
+      "fill": 1,
+      "linewidth": 2,
+      "xaxis": { "mode": "time" },
+      "yaxes": [
+        { "format": "short", "label": "Attempts/sec" },
+        { "format": "short" }
+      ]
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "instance",
+        "type": "query",
+        "query": "label_values(node_uname_info, instance)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Deployments",
+        "type": "events",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "deploy_timestamp_total",
+        "step": "60s"
+      }
+    ]
+  },
+  "links": [
+    { "title": "API Docs", "url": "/api/docs", "targetBlank": true },
+    { "title": "Health Check", "url": "/api/health", "targetBlank": true }
+  ]
+}

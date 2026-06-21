@@ -1,0 +1,98 @@
+name: Deploy to Railway
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment"
+        required: true
+        default: "production"
+        type: choice
+        options:
+          - production
+          - preview
+  push:
+    branches: [main]
+
+concurrency:
+  group: railway-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Deploy to Railway
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+
+      - name: Deploy backend
+        run: |
+          railway up --service backend --detach
+        working-directory: ./backend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Deploy frontend
+        run: |
+          railway up --service frontend --detach
+        working-directory: ./frontend
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Wait for deployment
+        run: |
+          railway status --wait --timeout 300
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Get deployment URL
+        id: railway-url
+        run: |
+          URL=$(railway domain --service backend 2>/dev/null || echo "")
+          if [ -z "$URL" ]; then
+            echo "url=$(railway service --service backend --json 2>/dev/null | jq -r '.domains[0]')" >> $GITHUB_OUTPUT
+          else
+            echo "url=$URL" >> $GITHUB_OUTPUT
+          fi
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 20); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://${{ steps.railway-url.outputs.url }}/api/health 2>/dev/null || echo "000")
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "Health check passed"
+              exit 0
+            fi
+            echo "Waiting... attempt $i/20 (status: $HTTP_STATUS)"
+            sleep 15
+          done
+          echo "Health check failed"
+          exit 1
+
+      - name: Notify
+        if: always()
+        uses: slackapi/slack-github-action@v1.24.0
+        with:
+          payload: |
+            {
+              "text": "${{ job.status == 'success' && 'Railway Deploy Succeeded' || 'Railway Deploy Failed' }}: ${{ github.repository }}",
+              "blocks": [
+                {
+                  "type": "section",
+                  "text": {
+                    "type": "mrkdwn",
+                    "text": "*Railway Deploy ${{ job.status == 'success' && 'Succeeded' || 'Failed' }}*\\nApp: ${{ github.repository }}\\nURL: https://${{ steps.railway-url.outputs.url }}\\nCommit: ${{ github.sha }}"
+                  }
+                }
+              ]
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}

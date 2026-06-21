@@ -1,0 +1,204 @@
+version: "3.8"
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+    internal: false
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  static_volume:
+    driver: local
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: enterprise-postgres
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./deploy/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-enterprise_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-enterprise_password}
+      POSTGRES_DB: ${POSTGRES_DB:-enterprise_dashboard}
+      POSTGRES_INITDB_ARGS: "--data-checksums"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-enterprise_admin} -d ${POSTGRES_DB:-enterprise_dashboard}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    container_name: enterprise-redis
+    restart: unless-stopped
+    networks:
+      - backend
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    command: >
+      redis-server --appendonly yes
+        --requirepass ${REDIS_PASSWORD:-enterprise_redis_password}
+        --maxmemory 256mb
+        --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: enterprise-dashboard-backend:latest
+    container_name: enterprise-backend
+    restart: unless-stopped
+    networks:
+      - frontend
+      - backend
+    volumes:
+      - static_volume:/app/static
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-enterprise_admin}:${POSTGRES_PASSWORD:-enterprise_password}@postgres:5432/${POSTGRES_DB:-enterprise_dashboard}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      ACCESS_TOKEN_EXPIRE_MINUTES: ${ACCESS_TOKEN_EXPIRE_MINUTES:-30}
+      REFRESH_TOKEN_EXPIRE_DAYS: ${REFRESH_TOKEN_EXPIRE_DAYS:-7}
+      ALGORITHM: HS256
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_URL: ${DEEPSEEK_API_URL:-https://api.deepseek.com/v1}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      FROM_EMAIL: ${FROM_EMAIL:-admin@enterprise.com}
+      OAUTH_GOOGLE_CLIENT_ID: ${OAUTH_GOOGLE_CLIENT_ID:-}
+      OAUTH_GOOGLE_CLIENT_SECRET: ${OAUTH_GOOGLE_CLIENT_SECRET:-}
+      OAUTH_GITHUB_CLIENT_ID: ${OAUTH_GITHUB_CLIENT_ID:-}
+      OAUTH_GITHUB_CLIENT_SECRET: ${OAUTH_GITHUB_CLIENT_SECRET:-}
+      CORS_ORIGINS: ${CORS_ORIGINS:-https://yourdomain.com}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-*}
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/1
+    logging: *default-logging
+
+  celery_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: enterprise-dashboard-backend:latest
+    container_name: enterprise-celery-worker
+    restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-enterprise_admin}:${POSTGRES_PASSWORD:-enterprise_password}@postgres:5432/${POSTGRES_DB:-enterprise_dashboard}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DEEPSEEK_API_URL: ${DEEPSEEK_API_URL:-https://api.deepseek.com/v1}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/1
+    command: celery -A app.worker worker --loglevel=info --concurrency=4
+    logging: *default-logging
+
+  celery_beat:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: enterprise-dashboard-backend:latest
+    container_name: enterprise-celery-beat
+    restart: unless-stopped
+    networks:
+      - backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-enterprise_admin}:${POSTGRES_PASSWORD:-enterprise_password}@postgres:5432/${POSTGRES_DB:-enterprise_dashboard}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/0
+      SECRET_KEY: ${SECRET_KEY:?SECRET_KEY is required}
+      CELERY_BROKER_URL: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/1
+      CELERY_RESULT_BACKEND: redis://:${REDIS_PASSWORD:-enterprise_redis_password}@redis:6379/1
+    command: celery -A app.worker beat --loglevel=info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    logging: *default-logging
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+        VITE_WS_URL: ${VITE_WS_URL:-/ws}
+    image: enterprise-dashboard-frontend:latest
+    container_name: enterprise-frontend
+    restart: unless-stopped
+    networks:
+      - frontend
+    depends_on:
+      - backend
+    logging: *default-logging
+
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    image: enterprise-dashboard-nginx:latest
+    container_name: enterprise-nginx
+    restart: unless-stopped
+    networks:
+      - frontend
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - static_volume:/static:ro
+      - ./deploy/ssl:/etc/nginx/ssl:ro
+      - ./deploy/letsencrypt:/etc/letsencrypt:ro
+    depends_on:
+      - frontend
+      - backend
+    logging: *default-logging
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

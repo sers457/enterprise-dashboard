@@ -1,0 +1,128 @@
+# =============================================================================
+# Prometheus Configuration for Enterprise Admin Dashboard
+# =============================================================================
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  scrape_timeout: 10s
+
+  external_labels:
+    monitor: "enterprise-dashboard"
+    environment: "${ENVIRONMENT:-production}"
+
+# Alertmanager configuration
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - alertmanager:9093
+
+# Rule files
+rule_files:
+  - "alert-rules.yml"
+
+# Scrape configuration
+scrape_configs:
+  # Prometheus self-monitoring
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          service: prometheus
+          component: monitoring
+
+  # Node Exporter (system metrics)
+  - job_name: "node"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["node_exporter:9100"]
+        labels:
+          service: node-exporter
+          component: system
+
+  # cAdvisor (container metrics)
+  - job_name: "cadvisor"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          service: cadvisor
+          component: containers
+
+  # Backend API metrics
+  - job_name: "backend"
+    metrics_path: "/api/metrics"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: backend
+          component: api
+    basic_auth:
+      username: prometheus
+      password: "${PROMETHEUS_PASSWORD}"
+
+  # Nginx metrics (via nginx_exporter)
+  - job_name: "nginx"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["nginx:9113"]
+        labels:
+          service: nginx
+          component: web
+
+  - job_name: "nginx-stub"
+    scrape_interval: 15s
+    metrics_path: "/nginx_status"
+    static_configs:
+      - targets: ["nginx:8080"]
+        labels:
+          service: nginx
+          component: stub
+
+  # PostgreSQL exporter
+  - job_name: "postgres"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["postgres_exporter:9187"]
+        labels:
+          service: postgres
+          component: database
+
+  # Redis exporter
+  - job_name: "redis"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["redis_exporter:9121"]
+        labels:
+          service: redis
+          component: cache
+
+  # Celery metrics
+  - job_name: "celery"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["celery_exporter:9808"]
+        labels:
+          service: celery
+          component: worker
+
+  # Application-specific metrics (FastAPI)
+  - job_name: "fastapi"
+    scrape_interval: 15s
+    metrics_path: "/api/metrics"
+    static_configs:
+      - targets: ["backend:8000"]
+        labels:
+          service: fastapi
+          component: application
+
+  # Docker daemon metrics
+  - job_name: "docker"
+    scrape_interval: 30s
+    static_configs:
+      - targets: ["docker:9323"]
+        labels:
+          service: docker
+          component: container-runtime
